@@ -45,7 +45,30 @@ export async function GET() {
 // ==========================================
 export async function POST(request) {
   try {
-    const body = await request.json();
+    const rawBody = await request.text();
+
+    if (!rawBody.trim()) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "ไม่พบข้อมูลที่ส่งมา (Request body is empty)",
+        },
+        { status: 400 }
+      );
+    }
+
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "รูปแบบ JSON ไม่ถูกต้อง",
+        },
+        { status: 400 }
+      );
+    }
 
     const {
       firstname,
@@ -53,21 +76,17 @@ export async function POST(request) {
       lastname,
       username,
       password,
-      status
+      status = "active",
     } = body;
 
-    if (
-      !firstname ||
-      !fullname ||
-      !lastname ||
-      !username ||
-      !password ||
-      !status
-    ) {
-      return NextResponse.json({
-        success: false,
-        message: "กรุณากรอกข้อมูลให้ครบถ้วน"
-      }, { status: 400 });
+    if (!firstname || !fullname || !lastname || !username || !password || !status) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "กรุณากรอกข้อมูลให้ครบถ้วน",
+        },
+        { status: 400 }
+      );
     }
 
     const [result] = await db.query(
@@ -77,19 +96,24 @@ export async function POST(request) {
       [firstname, fullname, lastname, username, password, status]
     );
 
-    return NextResponse.json({
-      success: true,
-      message: "เพิ่มข้อมูลผู้ใช้สำเร็จ",
-      insertId: result.insertId
-    }, { status: 201 });
-
+    return NextResponse.json(
+      {
+        success: true,
+        message: "เพิ่มข้อมูลผู้ใช้สำเร็จ",
+        insertId: result.insertId,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("POST Error:", error);
 
-    return NextResponse.json({
-      success: false,
-      message: "เกิดข้อผิดพลาดในการเพิ่มข้อมูล",
-      error: error.message
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        message: "เกิดข้อผิดพลาดในการเพิ่มข้อมูล",
+        error: error.message,
+      },
+      { status: 500 }
+    );
   }
 }
